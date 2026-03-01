@@ -1,0 +1,49 @@
+services:
+  openclaw-init:
+    image: alpine:3.19
+    container_name: openclaw-init
+    volumes:
+      - openclaw-data:/home/node/.openclaw
+      - ./configs/openclaw.json:/config/openclaw.json:ro
+      - ./configs/agents:/config/agents:ro
+    environment:
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
+    entrypoint:
+      - sh
+      - -c
+      - |
+        apk add --no-cache gettext > /dev/null 2>&1
+        envsubst < /config/openclaw.json > /home/node/.openclaw/openclaw.json
+        mkdir -p /home/node/.openclaw/agents
+        if [ -d /config/agents ] && [ "$$(ls -A /config/agents 2>/dev/null)" ]; then
+          cp /config/agents/*.json /home/node/.openclaw/agents/ 2>/dev/null || true
+        fi
+        chown -R 1000:1000 /home/node/.openclaw
+
+  openclaw:
+    image: alpine/openclaw:2026.2.26
+    container_name: openclaw-server
+    restart: unless-stopped
+    depends_on:
+      openclaw-init:
+        condition: service_completed_successfully
+    ports:
+      - "18789:18789"
+    volumes:
+      - openclaw-data:/home/node/.openclaw
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "1.0"
+        reservations:
+          memory: 512M
+
+volumes:
+  openclaw-data:
+    driver: local
