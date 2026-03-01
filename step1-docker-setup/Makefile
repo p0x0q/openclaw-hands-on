@@ -1,4 +1,4 @@
-.PHONY: deploy stop logs status restart doctor chat ask
+.PHONY: start stop logs status restart doctor chat ask
 
 CONTAINER := openclaw-server
 EXEC := docker exec $(CONTAINER) npx openclaw
@@ -7,9 +7,8 @@ EXEC := docker exec $(CONTAINER) npx openclaw
 # Core
 # =============================================================================
 
-deploy:
-	docker compose down
-	docker compose up -d
+start:
+	docker compose up
 
 stop:
 	docker compose stop

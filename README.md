@@ -33,14 +33,14 @@ cp .env.example .env
 vi .env  # ANTHROPIC_API_KEY を設定
 
 # 起動
-make deploy
+make start
 
-# 動作確認
+# 動作確認（別ターミナルで）
 make status
 make doctor
 ```
 
-ブラウザで http://localhost:18789/ にアクセスするか、ターミナルからチャットできます。
+フォアグラウンドで起動するため、動作確認は別ターミナルで行います。ブラウザで http://localhost:18789/ にアクセスするか、ターミナルからチャットできます。
 
 ```bash
 # TUI でチャット
@@ -62,9 +62,9 @@ cp .env.example .env
 vi .env
 
 # 起動
-make deploy
+make start
 
-# Slack 接続状況を確認
+# Slack 接続状況を確認（別ターミナルで）
 make channels
 ```
 
@@ -113,7 +113,7 @@ step1 をベースに、step2 では以下が追加されています。
 
 | コマンド | 説明 |
 |---------|------|
-| `make deploy` | コンテナ起動（down → up -d） |
+| `make start` | コンテナ起動（フォアグラウンド） |
 | `make stop` | コンテナ停止 |
 | `make logs` | ログをフォロー表示 |
 | `make status` | コンテナ状態確認 |
