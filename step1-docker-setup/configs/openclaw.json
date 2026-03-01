@@ -1,0 +1,26 @@
+{
+  "gateway": {
+    "mode": "local"
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "anthropic/claude-sonnet-4-5"
+      },
+      "sandbox": {
+        "mode": "off"
+      },
+      "memorySearch": {
+        "enabled": false
+      }
+    },
+    "list": [
+      {
+        "id": "default",
+        "default": true,
+        "workspace": "/home/node/.openclaw/workspace-default",
+        "identity": { "name": "Default Agent" }
+      }
+    ]
+  }
+}
