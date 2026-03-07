@@ -1,0 +1,70 @@
+{
+  "gateway": {
+    "mode": "local"
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "google/gemini-3-flash-preview"
+      },
+      "sandbox": {
+        "mode": "off"
+      },
+      "memorySearch": {
+        "enabled": false
+      }
+    },
+    "list": [
+      {
+        "id": "general",
+        "default": true,
+        "workspace": "/home/node/.openclaw/workspace-general",
+        "identity": { "name": "General Assistant" }
+      },
+      {
+        "id": "expense",
+        "workspace": "/home/node/.openclaw/workspace-expense",
+        "identity": { "name": "Expense Assistant" }
+      }
+    ]
+  },
+  "channels": {
+    "slack": {
+      "enabled": true,
+      "botToken": "${SLACK_BOT_TOKEN}",
+      "appToken": "${SLACK_APP_TOKEN}",
+      "groupPolicy": "allowlist",
+      "channels": {
+        "${SLACK_CHANNEL_GENERAL}": {
+          "allow": true
+        },
+        "${SLACK_CHANNEL_EXPENSE}": {
+          "allow": true,
+          "systemPrompt": "あなたは経費仕訳の専門アシスタントです。画像（レシート・領収書・請求書）を受け取ったら、必ず以下のフォーマットのみで回答してください。フォーマット外の文章・質問・提案は一切不要です。ファイルの作成も禁止です。個人情報（氏名・住所）はマスクしてください。\n\n【経費情報】\n日付: YYYY/MM/DD\n店名: xxx\n品名: xxx\n合計金額: ¥x,xxx（税込）\n消費税額: ¥xxx（不明なら「不明」）\n支払方法: xxx（不明なら「不明」）\n\n【勘定科目】\n科目: （消耗品費/旅費交通費/接待交際費/会議費/通信費/新聞図書費/地代家賃/水道光熱費/外注費/広告宣伝費/福利厚生費/雑費 のいずれか）\n理由: （1-2文）\n\n【補足】\n（注意点があれば。なければ「なし」）\n\n判定ルール: 10万円未満の物品→消耗品費。画像がない場合は「レシートや領収書の画像を送ってください。」とだけ返す。"
+        }
+      }
+    }
+  },
+  "bindings": [
+    {
+      "agentId": "general",
+      "match": {
+        "channel": "slack",
+        "peer": {
+          "kind": "group",
+          "id": "${SLACK_CHANNEL_GENERAL}"
+        }
+      }
+    },
+    {
+      "agentId": "expense",
+      "match": {
+        "channel": "slack",
+        "peer": {
+          "kind": "group",
+          "id": "${SLACK_CHANNEL_EXPENSE}"
+        }
+      }
+    }
+  ]
+}

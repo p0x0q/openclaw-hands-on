@@ -1,0 +1,64 @@
+services:
+  openclaw-init:
+    image: alpine:3.19
+    volumes:
+      - openclaw-data:/home/node/.openclaw
+      - ./configs/openclaw.json:/config/openclaw.json:ro
+      - ./configs/agents:/config/agents:ro
+      - ./workspaces/general:/config/workspaces/general:ro
+      - ./workspaces/expense:/config/workspaces/expense:ro
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
+      - SLACK_CHANNEL_GENERAL=${SLACK_CHANNEL_GENERAL}
+      - SLACK_CHANNEL_EXPENSE=${SLACK_CHANNEL_EXPENSE}
+    entrypoint:
+      - sh
+      - -c
+      - |
+        apk add --no-cache gettext > /dev/null 2>&1
+        envsubst < /config/openclaw.json > /home/node/.openclaw/openclaw.json
+        mkdir -p /home/node/.openclaw/agents
+        if [ -d /config/agents ] && [ "$$(ls -A /config/agents 2>/dev/null)" ]; then
+          cp /config/agents/*.json /home/node/.openclaw/agents/ 2>/dev/null || true
+        fi
+        # Setup per-agent workspaces
+        mkdir -p /home/node/.openclaw/workspace-general
+        mkdir -p /home/node/.openclaw/workspace-expense
+        cp /config/workspaces/general/AGENTS.md /home/node/.openclaw/workspace-general/AGENTS.md
+        cp /config/workspaces/expense/AGENTS.md /home/node/.openclaw/workspace-expense/AGENTS.md
+        # Setup per-agent auth profiles (each agent needs its own API key config)
+        AUTH_JSON="{\"google\":{\"apiKey\":\"$${GEMINI_API_KEY}\"}}"
+        for AGENT_ID in general expense; do
+          AGENT_DIR="/home/node/.openclaw/agents/$${AGENT_ID}/agent"
+          mkdir -p "$${AGENT_DIR}"
+          echo "$${AUTH_JSON}" > "$${AGENT_DIR}/auth-profiles.json"
+        done
+        chown -R 1000:1000 /home/node/.openclaw
+
+  openclaw:
+    image: alpine/openclaw:2026.2.26
+    restart: unless-stopped
+    depends_on:
+      openclaw-init:
+        condition: service_completed_successfully
+    ports:
+      - "18789:18789"
+    volumes:
+      - openclaw-data:/home/node/.openclaw
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "1.0"
+        reservations:
+          memory: 512M
+
+volumes:
+  openclaw-data:
+    driver: local
