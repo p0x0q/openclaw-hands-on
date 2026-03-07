@@ -1,0 +1,47 @@
+{
+  "gateway": {
+    "mode": "local"
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "google/gemini-3-flash-preview"
+      },
+      "sandbox": {
+        "mode": "off"
+      },
+      "memorySearch": {
+        "enabled": false
+      }
+    },
+    "list": [
+      {
+        "id": "default",
+        "default": true,
+        "workspace": "/home/node/.openclaw/workspace-default",
+        "identity": { "name": "Default Agent" }
+      }
+    ]
+  },
+  "browser": {
+    "enabled": true,
+    "headless": true,
+    "noSandbox": true,
+    "defaultProfile": "openclaw",
+    "executablePath": "/home/node/.openclaw/.cache/ms-playwright/chromium/chrome"
+  },
+  "channels": {
+    "slack": {
+      "enabled": true,
+      "botToken": "${SLACK_BOT_TOKEN}",
+      "appToken": "${SLACK_APP_TOKEN}",
+      "groupPolicy": "open"
+    }
+  },
+  "bindings": [
+    {
+      "agentId": "default",
+      "match": { "channel": "slack" }
+    }
+  ]
+}

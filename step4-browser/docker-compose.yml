@@ -1,0 +1,88 @@
+services:
+  openclaw-init:
+    image: alpine:3.19
+    container_name: openclaw-init
+    volumes:
+      - openclaw-data:/home/node/.openclaw
+      - ./configs/openclaw.json:/config/openclaw.json:ro
+      - ./configs/agents:/config/agents:ro
+    environment:
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
+    entrypoint:
+      - sh
+      - -c
+      - |
+        apk add --no-cache gettext > /dev/null 2>&1
+        envsubst < /config/openclaw.json > /home/node/.openclaw/openclaw.json
+        mkdir -p /home/node/.openclaw/agents
+        if [ -d /config/agents ] && [ "$$(ls -A /config/agents 2>/dev/null)" ]; then
+          cp /config/agents/*.json /home/node/.openclaw/agents/ 2>/dev/null || true
+        fi
+        chown -R 1000:1000 /home/node/.openclaw
+
+  openclaw-browser-init:
+    image: alpine/openclaw:2026.2.26
+    container_name: openclaw-browser-init
+    user: root
+    depends_on:
+      openclaw-init:
+        condition: service_completed_successfully
+    volumes:
+      - openclaw-data:/home/node/.openclaw
+    environment:
+      - PLAYWRIGHT_BROWSERS_PATH=/home/node/.openclaw/.cache/ms-playwright
+    entrypoint:
+      - sh
+      - -c
+      - |
+        MARKER="${PLAYWRIGHT_BROWSERS_PATH}/.installed"
+        if [ ! -f "$MARKER" ]; then
+          echo "[browser-init] Downloading Chromium (first run only)..."
+          node /app/node_modules/playwright-core/cli.js install chromium
+          mkdir -p "${PLAYWRIGHT_BROWSERS_PATH}"
+          touch "$MARKER"
+          chown -R node:node "${PLAYWRIGHT_BROWSERS_PATH}"
+          echo "[browser-init] Chromium downloaded."
+        else
+          echo "[browser-init] Chromium already downloaded, skipping."
+        fi
+        # Create stable symlink (version-independent path)
+        CHROME_BIN=$$(ls ${PLAYWRIGHT_BROWSERS_PATH}/chromium-*/chrome-linux/chrome 2>/dev/null | head -1)
+        if [ -n "$$CHROME_BIN" ]; then
+          CHROME_DIR=$$(dirname "$$CHROME_BIN")
+          ln -sfn "$$CHROME_DIR" "${PLAYWRIGHT_BROWSERS_PATH}/chromium"
+          chown -h node:node "${PLAYWRIGHT_BROWSERS_PATH}/chromium"
+          echo "[browser-init] Symlinked chromium -> $$CHROME_DIR"
+        fi
+
+  openclaw:
+    image: alpine/openclaw:2026.2.26
+    container_name: openclaw-server
+    restart: unless-stopped
+    user: root
+    depends_on:
+      openclaw-browser-init:
+        condition: service_completed_successfully
+    ports:
+      - "18789:18789"
+    volumes:
+      - openclaw-data:/home/node/.openclaw
+      - ./scripts/entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ["/entrypoint.sh"]
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
+      - PLAYWRIGHT_BROWSERS_PATH=/home/node/.openclaw/.cache/ms-playwright
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: "2.0"
+        reservations:
+          memory: 1G
+
+volumes:
+  openclaw-data:
+    driver: local
