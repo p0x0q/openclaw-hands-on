@@ -18,12 +18,10 @@
       {
         "id": "general",
         "default": true,
-        "workspace": "/home/node/.openclaw/workspace-general",
         "identity": { "name": "General Assistant" }
       },
       {
         "id": "expense",
-        "workspace": "/home/node/.openclaw/workspace-expense",
         "identity": { "name": "Expense Assistant" }
       }
     ]
