@@ -1,0 +1,44 @@
+.PHONY: start stop logs status restart doctor chat-general chat-expense ask-general ask-expense channels
+
+EXEC := docker compose exec openclaw npx openclaw
+
+# =============================================================================
+# Core
+# =============================================================================
+
+start:
+	docker compose up
+
+stop:
+	docker compose stop
+
+logs:
+	docker compose logs -f openclaw
+
+status:
+	docker compose ps
+
+restart:
+	docker compose restart openclaw
+
+# =============================================================================
+# OpenClaw CLI
+# =============================================================================
+
+doctor:
+	$(EXEC) doctor
+
+chat-general:
+	docker compose exec -it openclaw npx openclaw tui --agent general
+
+chat-expense:
+	docker compose exec -it openclaw npx openclaw tui --agent expense
+
+ask-general:
+	$(EXEC) agent --agent general -m "$(MSG)"
+
+ask-expense:
+	$(EXEC) agent --agent expense -m "$(MSG)"
+
+channels:
+	$(EXEC) channels status
