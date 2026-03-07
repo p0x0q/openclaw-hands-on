@@ -9,6 +9,7 @@ services:
     environment:
       - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
       - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
+      - SLACK_CHANNEL_ID=${SLACK_CHANNEL_ID}
     entrypoint:
       - sh
       - -c
