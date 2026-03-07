@@ -1,7 +1,6 @@
 .PHONY: start stop logs status restart doctor chat ask
 
-CONTAINER := openclaw-server
-EXEC := docker exec $(CONTAINER) npx openclaw
+EXEC := docker compose exec openclaw npx openclaw
 
 # =============================================================================
 # Core
@@ -30,7 +29,7 @@ doctor:
 	$(EXEC) doctor
 
 chat:
-	docker exec -it $(CONTAINER) npx openclaw tui
+	docker compose exec -it openclaw npx openclaw tui
 
 ask:
 	$(EXEC) agent --agent default -m "$(MSG)"
