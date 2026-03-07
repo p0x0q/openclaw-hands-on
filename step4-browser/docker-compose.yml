@@ -1,7 +1,7 @@
 services:
   openclaw-init:
     image: alpine:3.19
-    container_name: openclaw-init
+
     volumes:
       - openclaw-data:/home/node/.openclaw
       - ./configs/openclaw.json:/config/openclaw.json:ro
@@ -23,7 +23,7 @@ services:
 
   openclaw-browser-init:
     image: alpine/openclaw:2026.2.26
-    container_name: openclaw-browser-init
+
     user: root
     depends_on:
       openclaw-init:
@@ -58,7 +58,7 @@ services:
 
   openclaw:
     image: alpine/openclaw:2026.2.26
-    container_name: openclaw-server
+
     restart: unless-stopped
     user: root
     depends_on:
