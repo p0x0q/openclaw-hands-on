@@ -5,8 +5,6 @@ services:
       - openclaw-data:/home/node/.openclaw
       - ./configs/openclaw.json:/config/openclaw.json:ro
       - ./configs/agents:/config/agents:ro
-      - ./workspaces/general:/config/workspaces/general:ro
-      - ./workspaces/expense:/config/workspaces/expense:ro
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
@@ -23,11 +21,6 @@ services:
         if [ -d /config/agents ] && [ "$$(ls -A /config/agents 2>/dev/null)" ]; then
           cp /config/agents/*.json /home/node/.openclaw/agents/ 2>/dev/null || true
         fi
-        # Setup per-agent workspaces
-        mkdir -p /home/node/.openclaw/workspace-general
-        mkdir -p /home/node/.openclaw/workspace-expense
-        cp /config/workspaces/general/AGENTS.md /home/node/.openclaw/workspace-general/AGENTS.md
-        cp /config/workspaces/expense/AGENTS.md /home/node/.openclaw/workspace-expense/AGENTS.md
         # Setup per-agent auth profiles (each agent needs its own API key config)
         AUTH_JSON="{\"google\":{\"apiKey\":\"$${GEMINI_API_KEY}\"}}"
         for AGENT_ID in general expense; do
