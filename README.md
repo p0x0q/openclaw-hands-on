@@ -10,8 +10,10 @@ OpenClaw を Docker 環境で安全に動かし、各種サービスと連携す
 | Step 2 | `step2-slack-integration/` | Slack App を作成し、OpenClaw と連携 |
 | Step 3 | `step3-gemini/` | Slack 連携 + Gemini API で OpenClaw を起動 |
 | Step 4 | `step4-browser/` | Slack 連携 + Gemini + ブラウザ（Chromium）対応 |
+| Step 5 | `step5-multi-agent/` | マルチエージェント（general / expense の2エージェント構成） |
+| Step 6 | `step6-spreadsheet/` | Step 5 + Google スプレッドシート書き込み連携（gws CLI） |
 
-各ステップは独立して動作します。step1 → step2 は Anthropic 系、step3 → step4 は Gemini 系の順に進めてください。Step 3・4 は Step 2 の Slack 連携を含みます。
+各ステップは独立して動作します。step1 → step2 は Anthropic 系、step3 → step4 は Gemini 系、step5 → step6 はマルチエージェント系の順に進めてください。Step 3 以降は Step 2 の Slack 連携を含みます。
 
 ## 前提条件
 
@@ -22,7 +24,8 @@ OpenClaw を Docker 環境で安全に動かし、各種サービスと連携す
 | メモリ | 2GB 以上 |
 | ディスク | 5GB 以上の空き |
 | Anthropic API キー | [Anthropic Console](https://console.anthropic.com/) で発行（Step 1-2） |
-| Gemini API キー | [Google AI Studio](https://aistudio.google.com/apikey) で発行（Step 3-4） |
+| Gemini API キー | [Google AI Studio](https://aistudio.google.com/apikey) で発行（Step 3-6） |
+| Google Service Account | [GCP Console](https://console.cloud.google.com/iam-admin/serviceaccounts) で作成（Step 6） |
 
 Node.js のホスト側インストールは不要です。
 
@@ -115,6 +118,56 @@ make channels
 
 ブラウザ対応により、エージェントが Web ページの閲覧・操作を行えるようになります。リソース要件が上がるため、メモリ 4GB 以上を推奨します。
 
+## クイックスタート（Step 5）
+
+Step 3 をベースに、チャンネルごとに異なるエージェント（general / expense）を割り当てるマルチエージェント構成です。
+
+```bash
+cd step5-multi-agent
+
+# .env を作成し、Gemini API キー + Slack トークン + チャンネルIDを設定
+cp .env.example .env
+vi .env  # GEMINI_API_KEY, SLACK_*, SLACK_CHANNEL_GENERAL, SLACK_CHANNEL_EXPENSE を設定
+
+# 起動
+make start
+
+# 動作確認（別ターミナルで）
+make channels
+```
+
+expense チャンネルにレシート画像を送ると、経費仕訳情報をテキストで返します。
+
+## クイックスタート（Step 6）
+
+Step 5 に Google スプレッドシートへの書き込み機能を追加した構成です。expense エージェントがレシートを解析し、仕訳結果をスプレッドシートに自動記録します。
+
+### 事前準備: Google Service Account
+
+1. [GCP Console](https://console.cloud.google.com/) でプロジェクトを作成（または既存を使用）
+2. [Google Sheets API](https://console.cloud.google.com/apis/library/sheets.googleapis.com) を有効化
+3. [サービスアカウント](https://console.cloud.google.com/iam-admin/serviceaccounts) を作成し、JSON キーをダウンロード
+4. JSON キーを `step6-spreadsheet/credentials/service-account.json` に配置
+5. 対象スプレッドシートをサービスアカウントのメールアドレス（`xxx@project-id.iam.gserviceaccount.com`）に **編集者として共有**
+6. スプレッドシートの1行目にヘッダーを入力: `日付 | 店名 | 品名 | 合計金額 | 消費税額 | 支払方法 | 勘定科目 | 理由 | 記録日時`
+
+```bash
+cd step6-spreadsheet
+
+# .env を作成
+cp .env.example .env
+vi .env  # 各キー + GOOGLE_SHEETS_SPREADSHEET_ID を設定
+
+# 起動（初回は gws CLI インストールのため少し時間がかかります）
+make start
+
+# 動作確認（別ターミナルで）
+make channels
+make gws-version
+```
+
+expense チャンネルにレシート画像を送ると、仕訳結果の返信に加えて Google スプレッドシートに自動で1行追加されます。
+
 ## ディレクトリ構成
 
 ```
@@ -146,15 +199,33 @@ openclaw-hands-on/
 │   │       └── app-manifest.json   # Slack App Manifest（コピペ用）
 │   ├── .env.example
 │   └── Makefile
-└── step4-browser/
-    ├── docker-compose.yml          # Slack + Gemini + Chromium ブラウザ対応構成
+├── step4-browser/
+│   ├── docker-compose.yml          # Slack + Gemini + Chromium ブラウザ対応構成
+│   ├── configs/
+│   │   ├── openclaw.json           # Gemini + ブラウザ + Slack 設定
+│   │   ├── agents/
+│   │   └── channelManifest/
+│   │       └── app-manifest.json   # Slack App Manifest（コピペ用）
+│   ├── scripts/
+│   │   └── entrypoint.sh           # Chromium 依存関係インストール + 起動
+│   ├── .env.example
+│   └── Makefile
+├── step5-multi-agent/
+│   ├── docker-compose.yml          # マルチエージェント構成（general + expense）
+│   ├── configs/
+│   │   ├── openclaw.json           # 2エージェント + チャンネル別バインディング
+│   │   └── agents/
+│   ├── .env.example
+│   └── Makefile
+└── step6-spreadsheet/
+    ├── docker-compose.yml          # Step 5 + gws CLI + Google 認証情報マウント
     ├── configs/
-    │   ├── openclaw.json           # Gemini + ブラウザ + Slack 設定
-    │   ├── agents/
-    │   └── channelManifest/
-    │       └── app-manifest.json   # Slack App Manifest（コピペ用）
+    │   ├── openclaw.json           # expense エージェントにスプレッドシート書き込み指示追加
+    │   └── agents/
+    ├── credentials/                # Google Service Account JSON（gitignore 対象）
+    │   └── .gitkeep
     ├── scripts/
-    │   └── entrypoint.sh           # Chromium 依存関係インストール + 起動
+    │   └── entrypoint.sh           # gws CLI インストール + 権限降格起動
     ├── .env.example
     └── Makefile
 ```
@@ -191,6 +262,29 @@ step3 に Chromium ブラウザサポートを追加した構成です。
 | `configs/openclaw.json` | `browser` セクション追加（Chromium ヘッドレス） |
 | `scripts/entrypoint.sh` | Chromium 依存関係インストール + 権限降格起動（新規） |
 
+### step4 → step5（マルチエージェント）
+
+チャンネルごとに専用エージェントを割り当てるマルチエージェント構成です。
+
+| ファイル | 変更内容 |
+|---------|---------|
+| `docker-compose.yml` | `SLACK_CHANNEL_GENERAL` / `SLACK_CHANNEL_EXPENSE` 環境変数追加、エージェントごとの auth-profiles 設定 |
+| `configs/openclaw.json` | `agents.list` に general / expense の2エージェント追加、expense チャンネルに経費仕訳用 systemPrompt、チャンネル別 `bindings` |
+| `.env.example` | `SLACK_CHANNEL_GENERAL` / `SLACK_CHANNEL_EXPENSE` 追加 |
+
+### step5 → step6（スプレッドシート連携）
+
+step5 に Google Workspace CLI（`gws`）によるスプレッドシート書き込みを追加した構成です。
+
+| ファイル | 変更内容 |
+|---------|---------|
+| `docker-compose.yml` | `credentials/` マウント追加、`GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE` 環境変数追加、`entrypoint.sh` による gws CLI インストール |
+| `configs/openclaw.json` | expense エージェントの systemPrompt に「スプレッドシートへの記録手順」を追記 |
+| `scripts/entrypoint.sh` | gws CLI を永続ボリュームにインストール + symlink 作成 + 権限降格起動（新規） |
+| `credentials/` | Google Service Account JSON 配置先（新規、gitignore 対象） |
+| `.env.example` | `GOOGLE_SHEETS_SPREADSHEET_ID` 追加 |
+| `.gitignore` | `credentials/*.json` 追加 |
+
 ## Makefile コマンド一覧
 
 | コマンド | 説明 |
@@ -203,12 +297,17 @@ step3 に Chromium ブラウザサポートを追加した構成です。
 | `make doctor` | OpenClaw の診断実行 |
 | `make chat` | TUI でインタラクティブチャット |
 | `make ask MSG="..."` | ワンショットで質問 |
-| `make channels` | チャネル接続状態確認（step2-4） |
+| `make channels` | チャネル接続状態確認（step2-6） |
+| `make chat-general` | general エージェントとチャット（step5-6） |
+| `make chat-expense` | expense エージェントとチャット（step5-6） |
+| `make gws-version` | gws CLI のバージョン確認（step6） |
+| `make gws-sheet-read SHEET_ID=...` | スプレッドシートの内容を読み取り（step6） |
 
 ## セキュリティに関する注意
 
 - `.env` には API キー・トークンが含まれます。**絶対に Git にコミットしないでください**
 - `.gitignore` で `.env` は除外済みです
+- `credentials/` 内の Google Service Account JSON も機密情報です。**絶対に Git にコミットしないでください**
 - OpenClaw はコンテナ内に閉じ込められていますが、完璧なセキュリティ境界ではありません
 
 ## 参考リンク
@@ -217,3 +316,5 @@ step3 に Chromium ブラウザサポートを追加した構成です。
 - [OpenClaw Docker ドキュメント](https://docs.openclaw.ai/install/docker)
 - [Anthropic API キー発行](https://console.anthropic.com/)
 - [OpenClaw Slack 連携ドキュメント](https://docs.openclaw.ai/channels/slack)
+- [Google Workspace CLI](https://github.com/googleworkspace/cli)
+- [Google Sheets API](https://developers.google.com/sheets/api)
