@@ -1,0 +1,68 @@
+{
+  "gateway": {
+    "mode": "local"
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "google/gemini-3-flash-preview"
+      },
+      "sandbox": {
+        "mode": "off"
+      },
+      "memorySearch": {
+        "enabled": false
+      }
+    },
+    "list": [
+      {
+        "id": "general",
+        "default": true,
+        "identity": { "name": "General Assistant" }
+      },
+      {
+        "id": "expense",
+        "identity": { "name": "Expense Assistant" }
+      }
+    ]
+  },
+  "channels": {
+    "slack": {
+      "enabled": true,
+      "botToken": "${SLACK_BOT_TOKEN}",
+      "appToken": "${SLACK_APP_TOKEN}",
+      "groupPolicy": "allowlist",
+      "channels": {
+        "${SLACK_CHANNEL_GENERAL}": {
+          "allow": true
+        },
+        "${SLACK_CHANNEL_EXPENSE}": {
+          "allow": true,
+          "systemPrompt": "あなたは経費仕訳の専門アシスタントです。画像（レシート・領収書・請求書）を受け取ったら、以下の2つの手順を必ず両方実行してください。\n\n## 手順1: 仕訳情報の出力\n\nフォーマット外の文章・質問・提案は一切不要です。ファイルの作成も禁止です。個人情報（氏名・住所）はマスクしてください。\n\n【経費情報】\n日付: YYYY/MM/DD\n店名: xxx\n品名: xxx\n合計金額: ¥x,xxx（税込）\n消費税額: ¥xxx（不明なら「不明」）\n支払方法: xxx（不明なら「不明」）\n\n【勘定科目】\n科目: （消耗品費/旅費交通費/接待交際費/会議費/通信費/新聞図書費/地代家賃/水道光熱費/外注費/広告宣伝費/福利厚生費/雑費 のいずれか）\n理由: （1-2文）\n\n【補足】\n（注意点があれば。なければ「なし」）\n\n判定ルール: 10万円未満の物品→消耗品費。画像がない場合は「レシートや領収書の画像を送ってください。」とだけ返す。\n\n## 手順2: スプレッドシートへの記録\n\n仕訳情報の出力後、gws CLI を使ってスプレッドシートに1行追加してください。\n\n- スプレッドシートID: ${GOOGLE_SHEETS_SPREADSHEET_ID}\n- シート範囲: Sheet1!A1\n- 列順: 日付 | 店名 | 品名 | 合計金額 | 消費税額 | 支払方法 | 勘定科目 | 理由 | 記録日時\n- コマンド: gws sheets spreadsheets values append を使用\n- valueInputOption: USER_ENTERED を指定\n- 記録日時は現在日時（YYYY/MM/DD HH:MM 形式）\n\n記録成功時:「スプレッドシートに記録しました。」と報告。\n記録失敗時:「スプレッドシートへの記録に失敗しました。」と報告。"
+        }
+      }
+    }
+  },
+  "bindings": [
+    {
+      "agentId": "general",
+      "match": {
+        "channel": "slack",
+        "peer": {
+          "kind": "group",
+          "id": "${SLACK_CHANNEL_GENERAL}"
+        }
+      }
+    },
+    {
+      "agentId": "expense",
+      "match": {
+        "channel": "slack",
+        "peer": {
+          "kind": "group",
+          "id": "${SLACK_CHANNEL_EXPENSE}"
+        }
+      }
+    }
+  ]
+}
