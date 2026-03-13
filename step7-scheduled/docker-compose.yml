@@ -1,0 +1,68 @@
+services:
+  openclaw-init:
+    image: alpine:3.19
+    volumes:
+      - openclaw-data:/home/node/.openclaw
+      - ./configs/openclaw.json:/config/openclaw.json:ro
+      - ./configs/agents:/config/agents:ro
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
+      - SLACK_CHANNEL_GENERAL=${SLACK_CHANNEL_GENERAL}
+      - SLACK_CHANNEL_EXPENSE=${SLACK_CHANNEL_EXPENSE}
+      - GOOGLE_SHEETS_SPREADSHEET_ID=${GOOGLE_SHEETS_SPREADSHEET_ID}
+    entrypoint:
+      - sh
+      - -c
+      - |
+        apk add --no-cache gettext > /dev/null 2>&1
+        envsubst < /config/openclaw.json > /home/node/.openclaw/openclaw.json
+        mkdir -p /home/node/.openclaw/agents
+        if [ -d /config/agents ] && [ "$$(ls -A /config/agents 2>/dev/null)" ]; then
+          cp /config/agents/*.json /home/node/.openclaw/agents/ 2>/dev/null || true
+        fi
+        # Setup per-agent auth profiles (each agent needs its own API key config)
+        AUTH_JSON="{\"google\":{\"apiKey\":\"$${GEMINI_API_KEY}\"}}"
+        for AGENT_ID in general expense; do
+          AGENT_DIR="/home/node/.openclaw/agents/$${AGENT_ID}/agent"
+          mkdir -p "$${AGENT_DIR}"
+          echo "$${AUTH_JSON}" > "$${AGENT_DIR}/auth-profiles.json"
+        done
+        chown -R 1000:1000 /home/node/.openclaw
+
+  openclaw:
+    image: alpine/openclaw:2026.2.26
+    restart: unless-stopped
+    user: root
+    depends_on:
+      openclaw-init:
+        condition: service_completed_successfully
+    ports:
+      - "18789:18789"
+    volumes:
+      - openclaw-data:/home/node/.openclaw
+      - ./scripts/entrypoint.sh:/entrypoint.sh:ro
+      - ./scripts/process-uploads.js:/scripts/process-uploads.js:ro
+      - ./credentials:/credentials:ro
+      - ./uploads:/uploads
+    entrypoint: ["/entrypoint.sh"]
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
+      - SLACK_CHANNEL_EXPENSE=${SLACK_CHANNEL_EXPENSE}
+      - GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE=/credentials/service-account.json
+      - GOOGLE_SHEETS_SPREADSHEET_ID=${GOOGLE_SHEETS_SPREADSHEET_ID}
+      - PROCESS_INTERVAL=${PROCESS_INTERVAL:-600}
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: "1.0"
+        reservations:
+          memory: 512M
+
+volumes:
+  openclaw-data:
+    driver: local
