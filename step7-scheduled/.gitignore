@@ -1,9 +1,2 @@
 .env
 credentials/*.json
-uploads/*.jpg
-uploads/*.jpeg
-uploads/*.png
-uploads/*.gif
-uploads/*.heic
-uploads/*.pdf
-uploads/done/

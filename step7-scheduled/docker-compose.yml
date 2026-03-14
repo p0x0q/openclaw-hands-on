@@ -43,18 +43,18 @@ services:
     volumes:
       - openclaw-data:/home/node/.openclaw
       - ./scripts/entrypoint.sh:/entrypoint.sh:ro
-      - ./scripts/process-uploads.js:/scripts/process-uploads.js:ro
+      - ./scripts/scan-actions.js:/scripts/scan-actions.js:ro
       - ./credentials:/credentials:ro
-      - ./uploads:/uploads
     entrypoint: ["/entrypoint.sh"]
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
       - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
-      - SLACK_CHANNEL_EXPENSE=${SLACK_CHANNEL_EXPENSE}
       - GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE=/credentials/service-account.json
-      - GOOGLE_SHEETS_SPREADSHEET_ID=${GOOGLE_SHEETS_SPREADSHEET_ID}
-      - PROCESS_INTERVAL=${PROCESS_INTERVAL:-600}
+      - SCAN_CHANNELS=${SCAN_CHANNELS}
+      - REPORT_CHANNEL=${REPORT_CHANNEL}
+      - SCAN_DAYS=${SCAN_DAYS:-7}
+      - SCAN_INTERVAL=${SCAN_INTERVAL:-86400}
     deploy:
       resources:
         limits:
