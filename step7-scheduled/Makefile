@@ -1,4 +1,4 @@
-.PHONY: start stop logs status restart doctor chat-general chat-expense ask-general ask-expense channels gws-version gws-sheet-read process-now
+.PHONY: start stop logs status restart doctor chat-general chat-expense ask-general ask-expense channels gws-version gws-sheet-read scan-now
 
 EXEC := docker compose exec openclaw npx openclaw
 
@@ -54,8 +54,8 @@ gws-sheet-read:
 	docker compose exec openclaw gws sheets +read --spreadsheet $(SHEET_ID) --range "Sheet1!A1:I100"
 
 # =============================================================================
-# Scheduled Processing
+# Scheduled Scan
 # =============================================================================
 
-process-now:
-	docker compose exec openclaw node /scripts/process-uploads.js
+scan-now:
+	docker compose exec openclaw node /scripts/scan-actions.js

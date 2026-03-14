@@ -21,22 +21,21 @@ fi
 # Create symlink for global access (needed after container recreation)
 ln -sf "${GWS_DIR}/node_modules/.bin/gws" /usr/local/bin/gws
 
-# Ensure uploads directory structure
-mkdir -p /uploads/done
-chown -R 1000:1000 /uploads
-
-# Start scheduled upload processor in background
-INTERVAL="${PROCESS_INTERVAL:-600}"
-echo "[entrypoint] Starting scheduled upload processor (interval: ${INTERVAL}s)..."
-(
-  sleep 30  # Wait for OpenClaw to fully start
-  while true; do
-    echo "[scheduled] $(date -u '+%Y-%m-%dT%H:%M:%SZ') Running upload processor..."
-    node /scripts/process-uploads.js 2>&1 | sed 's/^/[scheduled] /'
-    echo "[scheduled] Next run in ${INTERVAL}s"
-    sleep "$INTERVAL"
-  done
-) &
+# Start scheduled action item scanner in background
+INTERVAL="${SCAN_INTERVAL:-86400}"
+if [ -n "$SCAN_CHANNELS" ]; then
+  echo "[entrypoint] Starting action item scanner (interval: ${INTERVAL}s)..."
+  (
+    sleep 30  # Wait for OpenClaw to fully start
+    while true; do
+      echo "[scan] $(date -u '+%Y-%m-%dT%H:%M:%SZ') Running action item scan..."
+      setpriv --reuid=1000 --regid=1000 --init-groups \
+        node /scripts/scan-actions.js 2>&1 | sed 's/^/[scan] /'
+      echo "[scan] Next scan in ${INTERVAL}s"
+      sleep "$INTERVAL"
+    done
+  ) &
+fi
 
 # Drop privileges and start gateway
 export HOME=/home/node
