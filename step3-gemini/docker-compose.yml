@@ -23,7 +23,7 @@ services:
         chown -R 1000:1000 /home/node/.openclaw
 
   openclaw:
-    image: alpine/openclaw:2026.2.26
+    image: alpine/openclaw:2026.4.5
 
     restart: unless-stopped
     depends_on:

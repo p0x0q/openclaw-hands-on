@@ -23,7 +23,7 @@ services:
         chown -R 1000:1000 /home/node/.openclaw
 
   openclaw-browser-init:
-    image: alpine/openclaw:2026.2.26
+    image: alpine/openclaw:2026.4.5
 
     user: root
     depends_on:
@@ -58,7 +58,7 @@ services:
         fi
 
   openclaw:
-    image: alpine/openclaw:2026.2.26
+    image: alpine/openclaw:2026.4.5
 
     restart: unless-stopped
     user: root
