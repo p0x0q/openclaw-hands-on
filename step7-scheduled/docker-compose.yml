@@ -33,7 +33,7 @@ services:
 
   openclaw:
     image: alpine/openclaw:2026.4.5
-    restart: unless-stopped
+    restart: "no"
     user: root
     depends_on:
       openclaw-init:
